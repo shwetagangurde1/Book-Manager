@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-// ✅ Hardcoded for Vercel Deployment
-const BASE_URL = 'https://6a16f8a41b90031f81b1cf53.mockapi.io/book-manager'
+// ✅ Correct MockAPI URL (this one actually has your data)
+const BASE_URL = 'https://6a171b961b90031f81b20bbc.mockapi.io/api/v1/books'
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -12,6 +12,7 @@ const api = axios.create({
 api.interceptors.response.use(
   (res) => res.data,
   (err) => {
+    console.error('API Error:', err.response?.status, err.config?.url)
     const message = err?.message || 'Something went wrong. Please try again.'
     return Promise.reject(new Error(message))
   },

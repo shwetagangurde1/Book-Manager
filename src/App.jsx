@@ -63,32 +63,31 @@ function App() {
   }
 
   const handleFormSubmit = async (data) => {
-    try {
-      // Always send publicationYear for consistency with MockAPI
-      const payload = { 
-        ...data, 
-        publicationYear: data.year 
-      }
-      
-      if (editingBook) {
-        await updateBook.mutateAsync({ 
-          id: editingBook.id, 
-          data: payload 
-        })
-        showToast('Book updated successfully')
-      } else {
-        await createBook.mutateAsync(payload)
-        showToast('Book added successfully')
-      }
-      
-      setIsFormOpen(false)
-      setEditingBook(null)
-    } catch (err) {
-      console.error(err)
-      showToast('Failed to save book. Please try again.', 'error')
+  try {
+    // Send publicationYear to match existing data structure
+    const payload = { 
+      ...data, 
+      publicationYear: Number(data.publicationYear || data.year) 
     }
+    
+    if (editingBook) {
+      await updateBook.mutateAsync({ 
+        id: editingBook.id, 
+        data: payload 
+      })
+      showToast('Book updated successfully')
+    } else {
+      await createBook.mutateAsync(payload)
+      showToast('Book added successfully')
+    }
+    
+    setIsFormOpen(false)
+    setEditingBook(null)
+  } catch (err) {
+    console.error(err)
+    showToast('Failed to save book. Please try again.', 'error')
   }
-
+}
   const handleConfirmDelete = async () => {
     if (!bookToDelete?.id) return
     
