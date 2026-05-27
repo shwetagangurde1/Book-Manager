@@ -3,7 +3,6 @@ import { bookService } from '../services/api'
 
 const QUERY_KEY = ['books']
 
-/** Fetch all books */
 export function useBooks() {
   return useQuery({
     queryKey: QUERY_KEY,
@@ -11,7 +10,6 @@ export function useBooks() {
   })
 }
 
-/** Create a new book */
 export function useCreateBook() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -20,7 +18,6 @@ export function useCreateBook() {
   })
 }
 
-/** Update an existing book */
 export function useUpdateBook() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -29,7 +26,6 @@ export function useUpdateBook() {
   })
 }
 
-/** Delete a book */
 export function useDeleteBook() {
   const queryClient = useQueryClient()
   return useMutation({

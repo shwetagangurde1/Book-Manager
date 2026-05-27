@@ -1,1 +1,36 @@
+/* src/index.css */
 @import "tailwindcss";
+
+@theme {
+  --radius-xl: 0.75rem;
+}
+
+@layer components {
+  .input {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-xl 
+           focus:outline-none focus:ring-2 focus:ring-indigo-500 
+           focus:border-transparent transition-all text-sm;
+  }
+  
+  .btn-primary {
+    @apply px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl 
+           hover:bg-indigo-700 transition-colors disabled:opacity-70 
+           flex items-center justify-center gap-2 text-sm;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-3 border border-gray-300 font-medium rounded-xl 
+           hover:bg-gray-50 transition-colors text-sm;
+  }
+  
+  .btn-danger {
+    @apply px-6 py-3 bg-red-600 text-white font-medium rounded-xl 
+           hover:bg-red-700 transition-colors disabled:opacity-70 
+           flex items-center justify-center gap-2 text-sm;
+  }
+  
+  .card {
+    @apply bg-white border border-gray-100 rounded-2xl shadow-sm 
+           hover:shadow-md transition-all duration-200 p-5;
+  }
+}

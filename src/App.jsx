@@ -1,219 +1,184 @@
-import { useState, useMemo, useCallback } from 'react'
-import { Plus, Filter, RefreshCw, Loader2, AlertCircle } from 'lucide-react'
-
-import { useBooks, useCreateBook, useUpdateBook, useDeleteBook } from './hooks/useBooks'
-import { GENRES, SORT_OPTIONS } from './constants'
-
-import Navbar from './components/Navbar'
-import BookCard from './components/BookCard'
-import BookForm from './components/BookForm'
-import DeleteConfirmDialog from './components/DeleteConfirmDialog'
-import SearchBar from './components/SearchBar'
-import EmptyState from './components/EmptyState'
-import Toast from './components/Toast'
+// src/App.jsx
+import { useState } from 'react';
+import { useBooks, useCreateBook, useUpdateBook, useDeleteBook } from './hooks/useBooks';
+import Navbar from './components/Navbar';
+import SearchBar from './components/SearchBar';
+import BookCard from './components/BookCard';
+import BookForm from './components/BookForm';
+import DeleteConfirmDialog from './components/DeleteConfirmDialog';
+import EmptyState from './components/EmptyState';
+import Toast from './components/Toast';
+import { SORT_OPTIONS, GENRES } from './constants';
 
 export default function App() {
-  // ── Data ────────────────────────────────────────────────────────────────
-  const { data: books = [], isLoading, isError, error, refetch } = useBooks()
-  const createMutation = useCreateBook()
-  const updateMutation = useUpdateBook()
-  const deleteMutation = useDeleteBook()
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingBook, setEditingBook] = useState(null);
+  const [bookToDelete, setBookToDelete] = useState(null);
+  const [toast, setToast] = useState(null);
 
-  // ── UI State ─────────────────────────────────────────────────────────────
-  const [formOpen, setFormOpen]       = useState(false)
-  const [editingBook, setEditingBook] = useState(null)
-  const [deletingBook, setDeletingBook] = useState(null)
-  const [search, setSearch]           = useState('')
-  const [genreFilter, setGenreFilter] = useState('all')
-  const [sortBy, setSortBy]           = useState('newest')
-  const [toast, setToast]             = useState(null)
+  const { data: books = [], isLoading, error } = useBooks();
+  const createBook = useCreateBook();
+  const updateBook = useUpdateBook();
+  const deleteBook = useDeleteBook();
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
-  const showToast = (message, type = 'success') => setToast({ message, type })
+  // Filter + Sort Logic
+  const filteredBooks = books
+    .filter(book => 
+      book.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      book.author?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter(book => !selectedGenre || book.genre === selectedGenre)
+    .sort((a, b) => {
+      if (sortBy === 'newest') return (b.year || 0) - (a.year || 0);
+      if (sortBy === 'oldest') return (a.year || 0) - (b.year || 0);
+      if (sortBy === 'title') return a.title.localeCompare(b.title);
+      if (sortBy === 'author') return a.author.localeCompare(b.author);
+      return 0;
+    });
 
-  const openAdd = () => { setEditingBook(null); setFormOpen(true) }
-  const openEdit = (book) => { setEditingBook(book); setFormOpen(true) }
-  const closeForm = () => { setFormOpen(false); setEditingBook(null) }
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
-  // ── Filtered + Sorted Books ──────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let list = [...books]
+  const handleAddBook = () => {
+    setEditingBook(null);
+    setIsFormOpen(true);
+  };
 
-    // Search
-    const q = search.trim().toLowerCase()
-    if (q) {
-      list = list.filter(
-        (b) =>
-          b.title?.toLowerCase().includes(q) ||
-          b.author?.toLowerCase().includes(q),
-      )
-    }
+  const handleEditBook = (book) => {
+    setEditingBook(book);
+    setIsFormOpen(true);
+  };
 
-    // Genre
-    if (genreFilter !== 'all') {
-      list = list.filter((b) => b.genre === genreFilter)
-    }
-
-    // Sort
-    list.sort((a, b) => {
-      if (sortBy === 'newest') return (b.year || 0) - (a.year || 0)
-      if (sortBy === 'oldest') return (a.year || 0) - (b.year || 0)
-      if (sortBy === 'title')  return (a.title || '').localeCompare(b.title || '')
-      if (sortBy === 'author') return (a.author || '').localeCompare(b.author || '')
-      return 0
-    })
-
-    return list
-  }, [books, search, genreFilter, sortBy])
-
-  // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleFormSubmit = useCallback(
-    async (data) => {
-      try {
-        if (editingBook) {
-          await updateMutation.mutateAsync({ id: editingBook.id, data })
-          showToast('Book updated successfully!')
-        } else {
-          await createMutation.mutateAsync(data)
-          showToast('Book added successfully!')
-        }
-        closeForm()
-      } catch (err) {
-        showToast(err.message, 'error')
-      }
-    },
-    [editingBook, createMutation, updateMutation],
-  )
-
-  const handleDeleteConfirm = useCallback(async () => {
+  const handleFormSubmit = async (data) => {
     try {
-      await deleteMutation.mutateAsync(deletingBook.id)
-      showToast('Book deleted.')
-      setDeletingBook(null)
+      if (editingBook) {
+        await updateBook.mutateAsync({ id: editingBook.id, data });
+        showToast('Book updated successfully!');
+      } else {
+        await createBook.mutateAsync(data);
+        showToast('Book added successfully!');
+      }
+      setIsFormOpen(false);
+      setEditingBook(null);
     } catch (err) {
-      showToast(err.message, 'error')
+      showToast('Failed to save book', 'error');
     }
-  }, [deletingBook, deleteMutation])
-
-  const hasFilters = search.trim() !== '' || genreFilter !== 'all'
-  const isMutating = createMutation.isPending || updateMutation.isPending
-
-  // ── Render ────────────────────────────────────────────────────────────────
+  };
+const handleDelete = async (book) => {
+    if (!book?.id) {
+      showToast('Error: Book ID not found', 'error');
+      return;
+    }
+    try {
+      await deleteBook.mutateAsync(book.id);
+      showToast('Book deleted successfully!');
+      setBookToDelete(null);
+    } catch (err) {
+      showToast('Failed to delete book', 'error');
+      console.error(err);
+    }
+  };
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar totalBooks={books.length} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-
-        {/* ── Toolbar ── */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          {/* Search */}
-          <div className="flex-1 min-w-0">
-            <SearchBar value={search} onChange={setSearch} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <div className="flex-1">
+            <SearchBar value={searchTerm} onChange={setSearchTerm} />
           </div>
 
-          {/* Genre filter */}
-          <div className="flex items-center gap-2">
-            <Filter size={15} className="text-gray-400 shrink-0" />
-            <select
-              value={genreFilter}
-              onChange={(e) => setGenreFilter(e.target.value)}
-              className="input w-40 bg-white text-sm"
-            >
-              <option value="all">All Genres</option>
-              {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
-            </select>
-          </div>
-
-          {/* Sort */}
           <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="input w-40 bg-white text-sm"
+            value={selectedGenre}
+            onChange={(e) => setSelectedGenre(e.target.value)}
+            className="input px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+            <option value="">All Genres</option>
+            {GENRES.map(genre => (
+              <option key={genre} value={genre}>{genre}</option>
             ))}
           </select>
 
-          {/* Add button */}
-          <button onClick={openAdd} className="btn-primary shrink-0">
-            <Plus size={16} /> Add Book
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="input px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {SORT_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <button 
+            onClick={handleAddBook} 
+            className="btn-primary whitespace-nowrap px-6 py-3"
+          >
+            + Add Book
           </button>
         </div>
 
-        {/* ── Results count ── */}
-        {!isLoading && !isError && books.length > 0 && (
-          <p className="text-sm text-gray-400 mb-4">
-            Showing <span className="font-medium text-gray-700">{filtered.length}</span> of{' '}
-            <span className="font-medium text-gray-700">{books.length}</span> books
-          </p>
-        )}
-
-        {/* ── Loading state ── */}
+        {/* States */}
         {isLoading && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 size={32} className="animate-spin text-indigo-500" />
-            <p className="text-sm text-gray-500">Loading your books…</p>
+          <div className="text-center py-20 text-gray-500">Loading your books...</div>
+        )}
+        
+        {error && (
+          <div className="text-center py-20 text-red-500">
+            Error loading books. Please check your API connection.
           </div>
         )}
 
-        {/* ── Error state ── */}
-        {isError && (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center">
-              <AlertCircle size={26} className="text-red-500" />
-            </div>
-            <div className="text-center">
-              <h3 className="font-semibold text-gray-800">Failed to load books</h3>
-              <p className="text-sm text-gray-500 mt-1 max-w-xs">
-                {error?.message || 'Could not connect to the API. Check your VITE_API_URL.'}
-              </p>
-            </div>
-            <button onClick={() => refetch()} className="btn-secondary gap-2">
-              <RefreshCw size={14} /> Try Again
-            </button>
-          </div>
-        )}
-
-        {/* ── Empty state ── */}
-        {!isLoading && !isError && filtered.length === 0 && (
-          <EmptyState hasFilters={hasFilters} onAddBook={openAdd} />
-        )}
-
-        {/* ── Book grid ── */}
-        {!isLoading && !isError && filtered.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {filtered.map((book) => (
-              <BookCard
-                key={book.id}
-                book={book}
-                onEdit={openEdit}
-                onDelete={(b) => setDeletingBook(b)}
+        {!isLoading && !error && (
+          <>
+            {filteredBooks.length === 0 ? (
+              <EmptyState 
+                hasFilters={!!searchTerm || !!selectedGenre} 
+                onAddBook={handleAddBook} 
               />
-            ))}
-          </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+               {filteredBooks.map(book => (
+  <BookCard
+    key={book.id}           // ← Make sure this line exists
+    book={book}
+    onEdit={handleEditBook}
+    onDelete={setBookToDelete}
+  />
+))}
+              </div>
+            )}
+          </>
         )}
-      </main>
+      </div>
 
-      {/* ── Modals ── */}
+      {/* Modals */}
       <BookForm
-        isOpen={formOpen}
-        onClose={closeForm}
+        isOpen={isFormOpen}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditingBook(null);
+        }}
         onSubmit={handleFormSubmit}
         book={editingBook}
-        isLoading={isMutating}
+        isLoading={createBook.isPending || updateBook.isPending}
       />
 
-      <DeleteConfirmDialog
-        book={deletingBook}
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setDeletingBook(null)}
-        isLoading={deleteMutation.isPending}
-      />
+    <DeleteConfirmDialog
+  book={bookToDelete}
+  onConfirm={() => handleDelete(bookToDelete)}   // ← Pass full book object
+  onCancel={() => setBookToDelete(null)}
+  isLoading={deleteBook.isPending}
+/>
 
-      {/* ── Toast ── */}
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </div>
-  )
+  );
 }

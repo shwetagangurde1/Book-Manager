@@ -18,18 +18,28 @@ export default function BookForm({ isOpen, onClose, onSubmit, book, isLoading })
       title: '',
       author: '',
       genre: '',
-      year: '',
+      publicationYear: '',
     },
   })
 
   // Populate form when editing
   useEffect(() => {
     if (book) {
-      reset({ title: book.title, author: book.author, genre: book.genre, year: book.year })
+      reset({ 
+        title: book.title || '', 
+        author: book.author || '', 
+        genre: book.genre || '', 
+        publicationYear: book.publicationYear || book.year || '' 
+      });
     } else {
-      reset({ title: '', author: '', genre: '', year: '' })
+      reset({ 
+        title: '', 
+        author: '', 
+        genre: '', 
+        publicationYear: '' 
+      });
     }
-  }, [book, reset])
+  }, [book, reset]);
 
   const handleClose = () => {
     reset()
@@ -100,21 +110,21 @@ export default function BookForm({ isOpen, onClose, onSubmit, book, isLoading })
             {errors.genre && <p className="mt-1 text-xs text-red-500">{errors.genre.message}</p>}
           </div>
 
-          {/* Year */}
+          {/* Publication Year */}
           <div>
             <label className="label">Publication Year <span className="text-red-500">*</span></label>
             <input
               type="number"
-              className={`input ${errors.year ? 'border-red-400 focus:ring-red-400' : ''}`}
-              placeholder="e.g. 1925"
-              {...register('year', {
+              className={`input ${errors.publicationYear ? 'border-red-400 focus:ring-red-400' : ''}`}
+              placeholder="e.g. 2018"
+              {...register('publicationYear', {
                 required: 'Year is required',
                 min: { value: 1, message: 'Enter a valid year' },
                 max: { value: currentYear, message: `Year can't be in the future` },
                 valueAsNumber: true,
               })}
             />
-            {errors.year && <p className="mt-1 text-xs text-red-500">{errors.year.message}</p>}
+            {errors.publicationYear && <p className="mt-1 text-xs text-red-500">{errors.publicationYear.message}</p>}
           </div>
 
           {/* Footer buttons */}
